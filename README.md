@@ -27,10 +27,12 @@
 
      Milestone 5. -->
 
+The Unofficial Guide is a document retrieval and question-answering tool built on the `campus_life` corpus. It indexes 88 student-authored documents covering course workloads, housing reviews, dining recommendations, and administrative advice that isn't plainly stated on official university sites. Users can ask natural-language questions about surviving day-to-day campus life, and the system retrieves the most relevant excerpts, evaluates semantic relevance, and generates an answer strictly grounded in those documents with citations.
+
 ## Chunking Strategy
 
-**Chunk size:**
-**Overlap:**
+**Chunk size:** 800 characters
+**Overlap:** 100 characters
 
 <!-- What about YOUR documents made you pick these numbers? Short posts and
      long sectioned guides don't want the same chunking, and "800 seemed
@@ -41,6 +43,8 @@
      more than pretending you got it right first time.
 
      Milestone 3. -->
+
+     When reading the `campus_life` documents in Milestone 1, the indexer reported that all 88 documents averaged approximately 317 characters, with the longest document topping out at 549 characters. Because each document is already a concise, single-topic student tip or review, setting the chunk size to 800 characters guarantees that an entire post remains intact as a single thought rather than being severed mid-sentence. An overlap of 100 characters ensures that any future, longer multi-paragraph posts maintain sentence context across chunk boundaries.
 
 ## Sample Chunks
 
