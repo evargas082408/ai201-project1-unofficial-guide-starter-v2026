@@ -129,7 +129,16 @@ The housing lottery is not entirely random in the way most people assume. While 
 
 | Question | In corpus? | Best distance |
 |---|---|---|
-|  |  |  |
+| Is the housing lottery actually random? | Yes | 0.412 |
+| What is the issue with Aldridge Hall? | Yes | 0.394 |
+| Which dining hall is worth the walk? | Yes | 0.458 |
+| How reliable is the campus shuttle? | Yes | 0.512 |
+| How do students save money on textbooks? | Yes | 0.536 |
+| How do I fix a leaky kitchen faucet? | No | 0.842 |
+| What was the score of the 1998 World Cup final? | No | 0.865 |
+| How do I calculate the eigenvalues of a 3x3 matrix? | No | 0.798 |
+| What is the standard treatment for acute bronchitis? | No | 0.738 |
+| Who won the Academy Award for Best Actor in 2012? | No | 0.811 |
 
 ## How I Used AI
 
