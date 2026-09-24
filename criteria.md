@@ -41,7 +41,7 @@ A non-negotiable goal of this system is preventing ungrounded hallucinations fro
 When I ask a question my documents clearly don't cover, the relevance gate
 stops it and the system returns "I don't have enough information about that" —
 in at least 4 of 5 tries.
-
+git add criteria.md questions.py
 **Why this target:**
 My in-scope campus queries returned cosine distances around 0.40–0.58, whereas completely unrelated topics clustered above 0.70. Setting a cutoff near 0.60 creates a clear separation, but a 4 of 5 target leaves room for an out-of-scope question that happens to share colloquial vocabulary with student posts.
 
