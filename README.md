@@ -190,15 +190,35 @@ When formulating my acceptance criteria for `criteria.md`, I asked Gemini to rev
 
 | Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
 |---|---|---|---|---|---|
-| 1. Retrieved chunk contains the answer | 4 of 5 |  |  |  |  |
-| 2. Every answer names a source | 5 of 5 |  |  |  |  |
-| 3. Gate stops out-of-corpus questions | 4 of 5 |  |  |  |  |
-| 4. | | | | | |
-| 5. | | | | | |
+| 1. Retrieved chunk contains the answer | 4 of 5 | 1/5 | 1/5 | 1/5 | MISSED |
+| 2. Every answer names a source | 5 of 5 | 4/5 | 4/5 | 4/5 | MISSED |
+| 3. Gate stops out-of-corpus questions | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 4. 90% of chunks 150 to 600 chars, none under 50 | as written | [x] | [x] | [x] | [MET/MISSED] |
+| 5. All 5 questions answered in under 4.0 s | as written | [x] | [x] | [x] | [MET/MISSED] |
 
 <!-- Underneath, paste the REAL output for each criterion from one of your
      runs — the actual text your system produced, not a description of it.
      Name the file and function that produced it. -->
+
+Source: results/run_2026-09-30_2333_before.md, produced by run_eval.py::main.
+All three runs match because retrieval is deterministic and scoring is a
+string match, so the only variation is in the answer wording. I ran the script
+three times in total (2329, 2330, 2333) and the results were identical each time.
+
+Criterion 1 (scorer.py::judge, run 1): housing lottery, dining, Aldridge and
+shuttle failed; textbooks passed.
+
+Criterion 2, the failing answer (run_eval.py, generate.py::answer_from_chunks):
+  Q: What is the issue with Aldridge Hall?
+  A: I don't have enough information about that.
+  (best distance 0.6559, refused by the gate; no source named)
+
+Criterion 3 (run_eval.py::check_out_of_scope, cutoff 0.6): refused 5 of 5.
+  What is the capital of Mongolia?  0.825 refused
+  How do I change the oil in a diesel engine?  0.934 refused
+  Who won the 1994 World Cup?  0.886 refused
+  What is the recommended dosage of ibuprofen for a headache?  0.844 refused
+  How do I write a for loop in Rust?  0.896 refused
 
 ## Verdicts
 
@@ -213,11 +233,11 @@ When formulating my acceptance criteria for `criteria.md`, I asked Gemini to rev
 
 | # | Criterion | Verdict | How I decided |
 |---|---|---|---|
-| 1 |  |  |  |
-| 2 |  |  |  |
-| 3 |  |  |  |
-| 4 |  |  |  |
-| 5 |  |  |  |
+| 1 | Retrieved chunk contains the answer | MISSED | 1 of 5 in all three runs against a target of 4. Only textbooks passed. |
+| 2 | Every answer names a source | MISSED | 4 of 5. The Aldridge Hall answer was the gate's refusal and named no source. |
+| 3 | Gate stops out-of-corpus questions | MET | 5 of 5 refused. The closest out-of-scope question was at 0.825, well above the 0.6 cutoff. |
+| 4 | Chunk lengths | [ ] | [How many of 88 chunks fell between 150 and 600, and the shortest one.] |
+| 5 | Response time | [ ] | [Slowest of the 15 timings.] |
 
 ## Diagnoses
 
@@ -238,6 +258,31 @@ When formulating my acceptance criteria for `criteria.md`, I asked Gemini to rev
      low, and which one you'd tighten and to what.
 
      Milestone 3. -->
+     
+**Criterion 1, housing lottery and shuttle (measurement, not pipeline).**
+Retrieval found admin_housing_lottery.txt and transit_shuttle.txt, and the
+answers were correct. They failed because scorer.py looks for the words
+"priority" and "schedule" in the answer, and the documents say "credit hours"
+and "timetable." The failure is in my test, not in the system.
+
+**Criterion 1, Aldridge Hall (gate, at the retrieval stage).**
+housing_aldridge_hall.txt was in the top 5, but its best distance was 0.656,
+which is over the 0.6 cutoff, so the gate refused before the model saw it. My
+cutoff was set from distances of 0.40 to 0.58 and this question sits outside
+that range. "mold" also appears nowhere in the corpus, so this question would
+have failed the scorer even if it got through.
+
+**Criterion 1, dining (retrieval).**
+The top 5 were Pellew, Halden and two housing halls. Neither Kestrel Commons
+file was retrieved. [Say what Kestrel Commons says and why the question matched
+Pellew and Halden better, after you've read the file.]
+
+**Criterion 2.** The one missing source is the Aldridge refusal, so it has the
+same cause as the Aldridge failure above: the gate cutoff.
+
+**Pattern.** Three of four failures trace to the test's word choices, and one
+(Aldridge) traces to a cutoff that is too tight for a question phrased around
+"issue."
 
 ## The Improvement
 
