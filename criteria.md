@@ -25,16 +25,32 @@ contains the answer.
 **Why this target:**
 The `campus_life` corpus contains direct, focused threads for most core topics (housing, dining, transit), but one question addresses textbook savings where advice is dispersed across multiple general threads. Setting the target to 4 of 5 accounts for semantic retrieval occasionally surfacing an adjacent financial thread instead of the primary one.
 
+> **Revised in unit 2:** For at least 4 of my 5 test questions, the source file
+> that holds the answer appears among the 5 retrieved sources.
+>
+> **Why revised:** The original wording says the retrieved chunks include one that
+> contains the answer, but scorer.py checks whether my `expects` word appears in
+> the generated answer, not in the chunks. Three of my five `expects` words
+> (priority, mold, schedule) appear nowhere in campus_life, so those questions
+> could not pass however well retrieval worked, and the shuttle question scored
+> differently across runs depending on whether the model wrote "schedule" or
+> "timetable". The criterion was measuring my word choice. The new version checks
+> the Sources line in results/ against one expected file per question:
+> admin_housing_lottery.txt, dining_kestrel_commons.txt, housing_aldridge_hall.txt,
+> transit_shuttle.txt, money_textbooks.txt. I fixed this list after seeing my
+> first run, so it is not a blind test. For dining I used the Kestrel Commons file
+> because my original `expects` word was Commons.
+>
+> The original criterion and its 1 of 5 result stay as measured.
+
 ---
 
 ## 2. Every answer names a source
 
 Every answer the system produces names at least one source document.
 
-For at least 4 of 5 questions, the document that holds the answer appears among the top 5 retrieved sources.
-
 **Why this target:**
-The original said "retrieved chunks include one that containsthe answer," but scorer.py checks whether my `expects` word appears in the generated answer, not in the chunks. Three of my five `expects` words (priority, mold, schedule) do not appear anywhere in the corpus, so those questions could not pass however well retrieval worked. The criterion measured my word choice, not retrieval. The new version checks the Sources line in results/ against a file I can name per question. Measured against the original, criterion 1 is still MISSED at 1 of 5.
+A non-negotiable goal of this system is preventing ungrounded hallucinations from model training data. Because the prompt assembly in `generate.py` explicitly injects document filenames and mandates attribution for any answered query, achieving 5 of 5 is entirely within system control unless the generation completely ignores prompt constraints.
 
 ---
 
