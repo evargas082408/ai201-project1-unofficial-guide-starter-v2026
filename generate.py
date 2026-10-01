@@ -200,6 +200,7 @@ def _get_client():
 
 
 def generate(prompt: str, system: str | None = None, cache: bool = True) -> str:
+    time.sleep(4)
     """
     Send a prompt and get text back.
 
