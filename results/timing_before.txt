@@ -1,0 +1,19 @@
+cutoff 0.6, top-k 5. Warm-up call (not counted): 2.02s
+run 1   0.71s  answered  Is the housing lottery actually random?
+run 1   1.04s  answered  Which dining hall is considered the best or worth the walk?
+run 1   0.05s  refused by gate  What is the issue with Aldridge Hall?
+run 1   0.68s  answered  How reliable is the campus shuttle?
+run 1   0.66s  answered  How do students save money on textbooks?
+run 1: 5/5 under 4.0s, slowest 1.04s
+run 2   0.68s  answered  Is the housing lottery actually random?
+run 2   0.85s  answered  Which dining hall is considered the best or worth the walk?
+run 2   0.05s  refused by gate  What is the issue with Aldridge Hall?
+run 2   0.71s  answered  How reliable is the campus shuttle?
+run 2   0.70s  answered  How do students save money on textbooks?
+run 2: 5/5 under 4.0s, slowest 0.85s
+run 3   0.64s  answered  Is the housing lottery actually random?
+run 3   2.11s  answered  Which dining hall is considered the best or worth the walk?
+run 3   0.05s  refused by gate  What is the issue with Aldridge Hall?
+run 3   0.81s  answered  How reliable is the campus shuttle?
+run 3   0.70s  answered  How do students save money on textbooks?
+run 3: 5/5 under 4.0s, slowest 2.11s
