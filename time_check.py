@@ -11,13 +11,15 @@ from store import search
 p = argparse.ArgumentParser()
 p.add_argument("--label", default="timing")
 p.add_argument("--runs", type=int, default=3)
+p.add_argument("--threshold", type=float, default=None)
 args = p.parse_args()
+threshold = config.THRESHOLD if args.threshold is None else args.threshold
 
 
 def one(question):
     start = time.perf_counter()
     results = search(question, top_k=config.TOP_K, corpus=config.CORPUS, variant="default")
-    decision = gate.check(results, threshold=config.THRESHOLD)
+    decision = gate.check(results, threshold=threshold)
     if decision.passed:
         answer_from_chunks(question, results, cache=False)
     return time.perf_counter() - start, decision.passed
@@ -25,7 +27,7 @@ def one(question):
 
 items = qs.answered()
 warm, _ = one(items[0]["question"])
-out = [f"cutoff {config.THRESHOLD}, top-k {config.TOP_K}. Warm-up call (not counted): {warm:.2f}s"]
+out = [f"cutoff {threshold}, top-k {config.TOP_K}. Warm-up call (not counted): {warm:.2f}s"]
 for run in range(1, args.runs + 1):
     times = []
     for item in items:
