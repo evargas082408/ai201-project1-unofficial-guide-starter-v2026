@@ -196,8 +196,8 @@ System as submitted in unit 1: cutoff 0.6, top-k 5, chunk size 800, overlap 120.
 
 | Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
 |---|---|---|---|---|---|
-| 1. Retrieved chunk contains the answer (original, scored by `scorer.py`) | 4 of 5 | 1/5 | 1/5 | 1/5 | MISSED |
-| 1. Revised: the answer's source file is among the 5 retrieved | 4 of 5 | 4/5 | 4/5 | 4/5 | MET |
+| 1. Retrieved chunk contains the answer (original: `expects` word in the answer) | 4 of 5 | 1/5 | 1/5 | 1/5 | MISSED |
+| 1. Revised: the answer's source file is among the 5 retrieved (`scorer.py`) | 4 of 5 | 4/5 | 4/5 | 4/5 | MET |
 | 2. Every answer names a source | 5 of 5 | 4/5 | 4/5 | 4/5 | MISSED |
 | 3. Gate stops out-of-corpus questions | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
 | 4. ≥90% of chunks 150–600 chars, 0 under 50 | 90%, 0 | 100%, 0 | 100%, 0 | 100%, 0 | MET |
@@ -207,9 +207,13 @@ System as submitted in unit 1: cutoff 0.6, top-k 5, chunk size 800, overlap 120.
 
 - Criteria 1–3: `results/run_2026-09-30_2333_before.md`, produced by `run_eval.py::main`.
   Each `run_eval.py` file holds three runs with caching off.
-- Criterion 1 (original) is the pass/fail column from `scorer.py::judge`. Criterion 1
-  (revised) is read off the "Sources retrieved" line for each question (the revision and
-  the expected file per question are in `criteria.md`).
+- Criterion 1 (original) is the pass/fail column from the first version of
+  `scorer.py::judge`, which checked my `expects` word against the generated answer.
+- Criterion 1 (revised) is scored by the current `scorer.py::judge`, which passes a question
+  when its expected file (the `source` field in `questions.py`, the same list as in
+  `criteria.md`) is among the retrieved chunks. Its pass/fail table is in
+  `results/run_2026-10-18_2234_before.md` (re-run at cutoff 0.6 with `--threshold 0.6`).
+  It matches the count I'd made by hand from the "Sources retrieved" lines.
 - Criterion 2 is counted by hand from the answer text: an answer passes if it names a
   `.txt` file.
 - Criterion 3 is one deterministic pass (`run_eval.py::check_out_of_scope`), so the same
@@ -223,6 +227,12 @@ to back with no changes (23:29, 23:30, 23:33). I first wrote that they were iden
 weren't: in the 23:29 file the shuttle question passed the scorer in runs 1 and 3 (the
 model happened to write "schedule"), so that file reads 2/5, 1/5, 2/5 for original
 criterion 1. It's a miss either way. The table uses the 23:33 file.
+
+**Rebuilt index.** Before the scorer re-runs I reinstalled the pinned `requirements.txt`
+(flask was missing), which put Chroma back on 0.6.3. The old `chroma_db` couldn't be read
+by that version, so I rebuilt it with `python app.py index`. Nothing about chunking or
+embedding changed, and the distances are identical (Aldridge 0.6559, lottery 0.2483,
+dining 0.4916 in both old and new runs).
 
 `results/run_2026-10-01_0137_before.md` is mislabeled. It was run after the cutoff had
 already been raised to 0.7 (its header says "relevance cutoff: 0.7"), so it is really an
@@ -240,7 +250,18 @@ already been raised to 0.7 (its header says "relevance cutoff: 0.7"), so it is r
 | How do students save money on textbooks? | pass | pass | pass |
 ```
 
-**Criterion 1, revised** — `store.py::search`, the "Sources retrieved" line per question:
+**Criterion 1, revised** — `scorer.py::judge` on `store.py::search` results
+(`results/run_2026-10-18_2234_before.md`):
+
+```
+| Is the housing lottery actually random? | pass | pass | pass |
+| Which dining hall is considered the best or worth the walk? | fail | fail | fail |
+| What is the issue with Aldridge Hall? | pass | pass | pass |
+| How reliable is the campus shuttle? | pass | pass | pass |
+| How do students save money on textbooks? | pass | pass | pass |
+```
+
+Why each one passed or failed, from the "Sources retrieved" line:
 
 ```
 lottery:   admin_housing_lottery.txt, admin_parking_permits.txt, advising_registration.txt, housing_morrow_house.txt, housing_tamsin_court.txt   -> admin_housing_lottery.txt present
@@ -379,16 +400,18 @@ because the gate doesn't change *which* chunks come back, only whether they're u
 
 ### Run Log — After
 
-Cutoff 0.7, everything else unchanged. Criteria 1–3 come from
-`results/run_2026-10-18_2123_after.md` (run on the final code). The two earlier after
+Cutoff 0.7, everything else unchanged. Original criterion 1 and criteria 2–3 come from
+`results/run_2026-10-18_2123_after.md` (run on the final code, old scorer). Revised
+criterion 1 comes from `results/run_2026-10-18_2236_after.md` (new scorer, which marks
+it pass/fail itself). Criterion 2 and 3 re-check the same in that file (5/5, 5/5). The two earlier after
 runs, `run_2026-09-30_2355_after.md` and `run_2026-10-01_0005_after.md`, agree on every
 criterion except one: original criterion 1 reads 1/5 in all of their runs. Criterion 4 is
 `results/chunk_lengths.txt` and criterion 5 is `results/timing_after.txt`.
 
 | Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
 |---|---|---|---|---|---|
-| 1. Retrieved chunk contains the answer (original, scored by `scorer.py`) | 4 of 5 | 1/5 | 2/5 | 1/5 | MISSED |
-| 1. Revised: the answer's source file is among the 5 retrieved | 4 of 5 | 4/5 | 4/5 | 4/5 | MET |
+| 1. Retrieved chunk contains the answer (original: `expects` word in the answer) | 4 of 5 | 1/5 | 2/5 | 1/5 | MISSED |
+| 1. Revised: the answer's source file is among the 5 retrieved (`scorer.py`) | 4 of 5 | 4/5 | 4/5 | 4/5 | MET |
 | 2. Every answer names a source | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
 | 3. Gate stops out-of-corpus questions | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
 | 4. ≥90% of chunks 150–600 chars, 0 under 50 | 90%, 0 | 100%, 0 | 100%, 0 | 100%, 0 | MET |

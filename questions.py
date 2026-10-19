@@ -25,23 +25,33 @@ QUESTIONS = [
     # {"question": "...", "expects": "..."},
     {
         "question": "Is the housing lottery actually random?",
-        "expects": "priority"
+        "expects": "priority",
+        # unit 2 revision of criterion 1: the file that holds the answer
+        "source": "admin_housing_lottery.txt",
     },
     {
         "question": "Which dining hall is considered the best or worth the walk?",
-        "expects": "Commons"
+        "expects": "Commons",
+        # unit 2 revision of criterion 1: the file that holds the answer
+        "source": "dining_kestrel_commons.txt",
     },
     {
         "question": "What is the issue with Aldridge Hall?",
-        "expects": "mold"
+        "expects": "mold",
+        # unit 2 revision of criterion 1: the file that holds the answer
+        "source": "housing_aldridge_hall.txt",
     },
     {
         "question": "How reliable is the campus shuttle?",
-        "expects": "schedule"
+        "expects": "schedule",
+        # unit 2 revision of criterion 1: the file that holds the answer
+        "source": "transit_shuttle.txt",
     },
     {
         "question": "How do students save money on textbooks?",
-        "expects": "library"
+        "expects": "library",
+        # unit 2 revision of criterion 1: the file that holds the answer
+        "source": "money_textbooks.txt",
     },
 ]
 

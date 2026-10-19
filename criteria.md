@@ -42,6 +42,12 @@ The `campus_life` corpus contains direct, focused threads for most core topics (
 > because my original `expects` word was Commons.
 >
 > The original criterion and its 1 of 5 result stay as measured.
+>
+> **Added later in unit 2:** `scorer.py` now checks this revised version directly. Each
+> question in `questions.py` has a `source` field (the five files listed above), and
+> `judge` passes the question when that file is among the retrieved chunks. Re-run results:
+> `results/run_2026-10-18_2234_before.md` (4/5, 4/5, 4/5) and
+> `results/run_2026-10-18_2236_after.md` (4/5, 4/5, 4/5).
 
 ---
 
