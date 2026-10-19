@@ -163,6 +163,20 @@ The housing lottery is not entirely random in the way most people assume. While 
 
 When formulating my acceptance criteria for `criteria.md`, I asked Gemini to review my draft ideas to ensure they met the course rubric's requirement for testable, measurable outcomes. The AI suggested checking chunk length boundaries and latency. 
 
+**3. (Unit 2)**
+
+I asked Claude Code to finish the unit 2 write-up from my partial run logs. It
+caught two things I'd missed. First, a `time.sleep(4)` I'd added to `generate.py` to
+dodge rate limits would have added 4 s to every answer, and it was a second change
+to the system. Second, my "before" runs weren't actually identical, as I'd claimed:
+the 23:29 file has the shuttle question passing twice. It also spotted the pattern
+in my failures: my `expects` words ("priority", "mold", "schedule") appear in zero
+corpus documents, and the dining question ranks housing buildings named "Hall"
+above Kestrel Commons. It wrote `chunk_check.py`, ran the after timing and the
+fresh after eval, and drafted the unit 2 sections. I kept the strict MISSED call
+on criterion 2 after it argued the opposite reading (that a refusal isn't an
+answer).
+
 <!-- ── Stretch features ─────────────────────────────────────────────────────
      Doing one? Say so here BEFORE you start. A feature this README never
      claims earns nothing.
@@ -297,93 +311,158 @@ run 3: 5/5 under 4.0s, slowest 2.11s
 
 ## Diagnoses
 
-<!-- For each miss: which stage caused it, and how. The stage alone isn't
-     enough — you need the mechanism.
+**Criterion 1 (original), lottery, shuttle and Aldridge: the test, not the pipeline.**
+`scorer.py::judge` passes an answer only if it contains my `expects` word. "priority",
+"mold" and "schedule" appear in **zero** of the 88 corpus documents (checked with grep),
+so those three questions could never pass, however good retrieval and generation were.
+The answers themselves were right. The lottery answer says juniors and seniors are
+ordered by "credit hours", and the shuttle answer says the "timetable is optimistic by
+about five minutes". I picked the `expects` words from what I assumed the documents said
+instead of what they actually say. This is why I revised criterion 1 (see `criteria.md`).
 
-     Not a diagnosis: "Question 3 didn't work."
-     A diagnosis:     "Question 3 asks about laundry costs. The answer is in
-                       one sentence that got split across two chunks, so
-                       neither chunk on its own contains it."
+**Criterion 1, dining: embedding/retrieval stage, matching on the word "Hall".**
+The question asks which "dining hall" is worth the walk. I expected Kestrel Commons. The
+top 5 were Pellew Dining Hall (twice), Halden Hall, and two *housing* buildings,
+Innisfree Hall (0.552) and Aldridge Hall (0.558). Those housing docs say nothing about
+dining. They rank above four of the seven dining venues because their titles contain
+"Hall". Kestrel Commons doesn't have "Hall" in its name. It ranks **25th** at 0.704, and
+the gate would refuse it on its own. Every dining document follows the same template
+("Wait times … The thing worth going for is …"), so the bodies barely separate them. The
+title word is what the embedding latches onto.
 
-     The five stages: loading → chunking → embedding → retrieval → generation.
+There is a second problem underneath. No dining document calls any hall "the best", so
+this question has no single right answer in the corpus. "Commons" was my opinion, not
+something the documents say.
 
-     Look for a pattern. If three misses all ask about numbers, that's one
-     problem, not three.
+**Criterion 2, the Aldridge refusal: the relevance gate, at the retrieval stage.**
+`housing_aldridge_hall.txt` *was* retrieved. The answer (the elevator is out a week per
+semester, and the washer/dryer ratio is wrong) is in it and in
+`housing_aldridge_hall_laundry.txt`. But the best distance was 0.656, over the 0.6 cutoff,
+so `gate.py::check` refused before the model saw anything, and a refusal names no
+source. The question is short and vague ("what is the issue"), while the documents are a
+list of specifics, so even the right document only gets to 0.656. My unit 1 cutoff table
+lists 0.394 for this question, but every run this unit measured 0.656. None of the five
+in-scope distances in that table match what the system returns now (lottery 0.248,
+dining 0.492, Aldridge 0.656, shuttle 0.575, textbooks 0.337). So the 0.6 cutoff was
+calibrated against numbers that don't describe this system. That is the real reason it
+was too tight.
 
-     Missed nothing? Say so, then say honestly whether your targets were set
-     low, and which one you'd tighten and to what.
+**Pattern.** Every miss traces back to a decision I made *about* the corpus without
+checking it against the corpus: `expects` words that aren't in it, a "best dining hall"
+it never names, and a cutoff set from distances that don't match it. The pipeline's own
+failure is the dining retrieval, where the embedding over-weights a title word.
 
-     Milestone 3. -->
-     
-**Criterion 1, housing lottery and shuttle (measurement, not pipeline).**
-Retrieval found admin_housing_lottery.txt and transit_shuttle.txt, and the
-answers were correct. They failed because scorer.py looks for the words
-"priority" and "schedule" in the answer, and the documents say "credit hours"
-and "timetable." The failure is in my test, not in the system.
-
-**Criterion 1, Aldridge Hall (gate, at the retrieval stage).**
-housing_aldridge_hall.txt was in the top 5, but its best distance was 0.656,
-which is over the 0.6 cutoff, so the gate refused before the model saw it. My
-cutoff was set from distances of 0.40 to 0.58 and this question sits outside
-that range. "mold" also appears nowhere in the corpus, so this question would
-have failed the scorer even if it got through.
-
-**Criterion 1, dining (retrieval).**
-The top 5 were Pellew, Halden and two housing halls. Neither Kestrel Commons
-file was retrieved. [Say what Kestrel Commons says and why the question matched
-Pellew and Halden better, after you've read the file.]
-
-**Criterion 2.** The one missing source is the Aldridge refusal, so it has the
-same cause as the Aldridge failure above: the gate cutoff.
-
-**Pattern.** Three of four failures trace to the test's word choices, and one
-(Aldridge) traces to a cutoff that is too tight for a question phrased around
-"issue."
+**Criteria I met but set too low.** Criterion 4 can't fail on this corpus. The longest
+document is 549 chars and the chunk size is 800, so the chunker never splits anything
+("documents the chunker split into more than one chunk: 0"). The criterion measures how
+long the documents are, not anything my chunking did. Criterion 3 is also safe: the
+out-of-scope questions are from completely different worlds (Mongolia, diesel engines)
+and sit 0.2 or more past the cutoff. Next time I'd tighten criterion 3 to near-miss
+questions the corpus doesn't cover, like "What's the gym schedule?" or "How much is
+parking for visitors?".
 
 ## The Improvement
 
-**What I changed:**
+**What I changed:** the relevance cutoff in `config.py`, `THRESHOLD = 0.6` → `THRESHOLD = 0.7`.
+That is the only change to the system. I also took out a `time.sleep(4)` I'd added to
+`generate.py::generate` to dodge rate limits, and a chunk-overlap edit (120 → 100).
+Neither was part of the improvement, and the overlap edit did nothing since no document
+gets split. For the after run I stayed under Gemini's free-tier limit (15 requests per
+minute) by setting `config.REQUESTS_PER_MINUTE = 12` from the command line for that one
+run, without editing any file.
 
-**Why I picked it:**
-
-<!-- Connect it to a specific diagnosis above in one sentence. If you can't,
-     you picked a fix because it sounded impressive. -->
+**Why I picked it:** the Aldridge Hall question was refused at 0.656 even though the right
+document was retrieved, and that one refusal is the entire criterion 2 miss. 0.7 lets
+0.656 through and still sits below the closest out-of-scope question (0.825). So it
+should fix criterion 2 without breaking criterion 3. It won't touch the dining miss,
+because the gate doesn't change *which* chunks come back, only whether they're used.
 
 ### Run Log — After
 
-<!-- Same format, same five criteria, three runs each.
-     `python run_eval.py --label after` -->
+Cutoff 0.7, everything else unchanged. Criteria 1–3 come from
+`results/run_2026-10-18_2123_after.md` (run on the final code). The two earlier after
+runs, `run_2026-09-30_2355_after.md` and `run_2026-10-01_0005_after.md`, agree on every
+criterion except one: original criterion 1 reads 1/5 in all of their runs. Criterion 4 is
+`results/chunk_lengths.txt` and criterion 5 is `results/timing_after.txt`.
 
 | Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
 |---|---|---|---|---|---|
-| 1. Retrieved chunk contains the answer | 4 of 5 |  |  |  |  |
-| 2. Every answer names a source | 5 of 5 |  |  |  |  |
-| 3. Gate stops out-of-corpus questions | 4 of 5 |  |  |  |  |
-| 4. | | | | | |
-| 5. | | | | | |
+| 1. Retrieved chunk contains the answer (original, scored by `scorer.py`) | 4 of 5 | 1/5 | 2/5 | 1/5 | MISSED |
+| 1. Revised: the answer's source file is among the 5 retrieved | 4 of 5 | 4/5 | 4/5 | 4/5 | MET |
+| 2. Every answer names a source | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 3. Gate stops out-of-corpus questions | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 4. ≥90% of chunks 150–600 chars, 0 under 50 | 90%, 0 | 100%, 0 | 100%, 0 | 100%, 0 | MET |
+| 5. All 5 questions answered in under 4.0 s | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
 
-**Did it help?**
+Before and after, side by side:
 
-<!-- Say plainly whether it did, and how you know. If it made things worse,
-     say that — a change that backfired, honestly reported, earns full credit
-     and is more interesting than one that worked. What matters is that you can
-     tell.
+| Criterion | Before (runs 1/2/3) | After (runs 1/2/3) | Change |
+|---|---|---|---|
+| 1 original | 1/5, 1/5, 1/5 | 1/5, 2/5, 1/5 | none (run 2's extra pass is the model writing "schedule" once) |
+| 1 revised | 4/5, 4/5, 4/5 | 4/5, 4/5, 4/5 | none |
+| 2 | 4/5, 4/5, 4/5 | 5/5, 5/5, 5/5 | **MISSED → MET** |
+| 3 | 5/5 | 5/5 | none (closest out-of-scope 0.825 vs cutoff 0.7) |
+| 4 | 100%, 0 under 50 | 100%, 0 under 50 | none |
+| 5 | 15/15, slowest 2.11 s | 15/15, slowest 0.90 s | none (still MET) |
 
-     Milestone 4. -->
+The Aldridge answer that used to be a refusal, after the fix (run 1, `generate.py::answer_from_chunks`):
+
+```
+Q: What is the issue with Aldridge Hall?
+- Best distance: 0.6559 (passed the gate)
+A: Based on the provided documents, the issues with Aldridge Hall are:
+- The elevator is out roughly one week per semester (`housing_aldridge_hall.txt`).
+- The ratio of eight washers to six dryers is wrong, which causes the dryers to back up on
+  Sunday evenings (`housing_aldridge_hall_laundry.txt`).
+```
+
+**Did it help?** Yes, for the thing it was aimed at. Criterion 2 went from 4/5 in every run to
+5/5 in every run, because the Aldridge answer now passes the gate and cites two files.
+Criterion 3 didn't get worse: all five out-of-scope questions are still refused. It did
+nothing for original criterion 1. Aldridge is now answered correctly, but the answer
+still doesn't contain "mold" because "mold" isn't in the corpus. It also did nothing for
+the dining miss, as expected. The cost is a thinner safety margin: the gap between the
+cutoff and the nearest out-of-scope question shrank from 0.225 to 0.125.
 
 ## What's Still Broken
 
-<!-- For each criterion still missed after your fix: what you'd do about it,
-     and why you stopped where you did.
-
-     "I ran out of time" is fine if it's true. Pretending nothing is left is
-     not.
-
-     Milestone 5. -->
+- **Criterion 1 (original), still 1/5.** The `expects` words for lottery, Aldridge and
+  shuttle aren't in the corpus. Swapping them now ("credit hours", "elevator",
+  "timetable") would be loosening the test after seeing the answers, so I left them and
+  revised the criterion instead. Next time I'd pick `expects` words by grepping the
+  corpus *before* writing the criteria.
+- **Dining retrieval, the one miss under revised criterion 1.** The embedding ranks
+  buildings named "Hall" above Kestrel Commons, which sits 25th. Hybrid BM25 wouldn't save
+  this question, because "Kestrel" and "Commons" aren't in it, and "hall" would match the
+  same wrong documents. The honest fix is the question, not the pipeline: nothing in the
+  corpus says which hall is best. I'd replace it with one the corpus does answer, like
+  "Which dining hall has the shortest lunch wait?", and test that blind. I stopped here
+  because the rule is one change per unit, and changing a test question isn't an
+  improvement to the system.
+- **Cold start (criterion 5's blind spot).** `time_check.py` doesn't count its warm-up call,
+  and after the fix that call took **5.24 s** (`results/timing_after.txt`), over the 4.0 s
+  target. A real user's first question would miss the target. I'd fix it by loading the
+  embedding model and API client when the server starts, in `serve.py`, not on the first
+  question.
+- **The gate cutoff is still a guess on 5 + 5 questions.** At 0.7 it is 0.044 above the
+  Aldridge question and 0.125 below the nearest out-of-scope one. With only ten data
+  points I can't say where the real gap is. I'd want 20 or more in-scope and near-miss
+  out-of-scope questions before trusting it.
 
 ## What I'd Do Differently
 
-<!-- Knowing what you know now — which of your five criteria would you write
-     differently, and why?
+- **Criterion 1:** I'd write it as the source-file check from the start ("the file that holds
+  the answer is in the top 5"), with the expected file per question written down
+  *before* any run, so the revision wouldn't have to be a non-blind test.
+- **Criterion 4:** I'd make it about chunking, not document length. With 800-char chunks and
+  no document longer than 563 chars, it can't fail. Something like "for questions whose answer
+  spans two documents (an original post and its follow-up), both appear in the top 5"
+  would actually test retrieval over this corpus's post/reply structure.
+- **Criterion 5:** I'd count the first call, because "under 4 seconds" should mean what a
+  user actually waits.
+- **Criterion 3:** I'd use near-miss questions instead of other-world questions, so the gate
+  is actually tested.
 
-     Milestone 5. -->
+<!-- ── Stretch features ─────────────────────────────────────────────────────
+     None attempted this unit.
+     ───────────────────────────────────────────────────────────────────────── -->
