@@ -178,66 +178,122 @@ When formulating my acceptance criteria for `criteria.md`, I asked Gemini to rev
 
 ## Run Log — Before
 
-<!-- Your five criteria, three runs each. `python run_eval.py --label before`
-     runs the questions, puts the OUT_OF_SCOPE ones through the gate, and
-     writes it all into results/ for you. Targets come from criteria.md; the
-     verdict column is your call.
-
-     Criterion 3 is measured in one deterministic pass rather than three, so
-     the same number goes in all three run columns. That's correct, not lazy.
-
-     Milestone 1. -->
+System as submitted in unit 1: cutoff 0.6, top-k 5, chunk size 800, overlap 120.
 
 | Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
 |---|---|---|---|---|---|
-| 1. Retrieved chunk contains the answer | 4 of 5 | 1/5 | 1/5 | 1/5 | MISSED |
+| 1. Retrieved chunk contains the answer (original, scored by `scorer.py`) | 4 of 5 | 1/5 | 1/5 | 1/5 | MISSED |
+| 1. Revised: the answer's source file is among the 5 retrieved | 4 of 5 | 4/5 | 4/5 | 4/5 | MET |
 | 2. Every answer names a source | 5 of 5 | 4/5 | 4/5 | 4/5 | MISSED |
 | 3. Gate stops out-of-corpus questions | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
-| 4. 90% of chunks 150 to 600 chars, none under 50 | as written | [x] | [x] | [x] | [MET/MISSED] |
-| 5. All 5 questions answered in under 4.0 s | as written | [x] | [x] | [x] | [MET/MISSED] |
+| 4. ≥90% of chunks 150–600 chars, 0 under 50 | 90%, 0 | 100%, 0 | 100%, 0 | 100%, 0 | MET |
+| 5. All 5 questions answered in under 4.0 s | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
 
-<!-- Underneath, paste the REAL output for each criterion from one of your
-     runs — the actual text your system produced, not a description of it.
-     Name the file and function that produced it. -->
+**Where the numbers come from.**
 
-Source: results/run_2026-09-30_2333_before.md, produced by run_eval.py::main.
-All three runs match because retrieval is deterministic and scoring is a
-string match, so the only variation is in the answer wording. I ran the script
-three times in total (2329, 2330, 2333) and the results were identical each time.
+- Criteria 1–3: `results/run_2026-09-30_2333_before.md`, produced by `run_eval.py::main`.
+  Each `run_eval.py` file holds three runs with caching off.
+- Criterion 1 (original) is the pass/fail column from `scorer.py::judge`. Criterion 1
+  (revised) is read off the "Sources retrieved" line for each question (the revision and
+  the expected file per question are in `criteria.md`).
+- Criterion 2 is counted by hand from the answer text: an answer passes if it names a
+  `.txt` file.
+- Criterion 3 is one deterministic pass (`run_eval.py::check_out_of_scope`), so the same
+  number goes in all three columns.
+- Criterion 4: `results/chunk_lengths.txt`, from `chunk_check.py`. Chunking is
+  deterministic, so it is one measurement in all three columns.
+- Criterion 5: `results/timing_before.txt`, from `time_check.py` (three timed passes, cache off).
 
-Criterion 1 (scorer.py::judge, run 1): housing lottery, dining, Aldridge and
-shuttle failed; textbooks passed.
+**A correction to what I wrote earlier.** I ran `run_eval.py --label before` three times back
+to back with no changes (23:29, 23:30, 23:33). I first wrote that they were identical. They
+weren't: in the 23:29 file the shuttle question passed the scorer in runs 1 and 3 (the
+model happened to write "schedule"), so that file reads 2/5, 1/5, 2/5 for original
+criterion 1. It's a miss either way. The table uses the 23:33 file.
 
-Criterion 2, the failing answer (run_eval.py, generate.py::answer_from_chunks):
-  Q: What is the issue with Aldridge Hall?
-  A: I don't have enough information about that.
-  (best distance 0.6559, refused by the gate; no source named)
+`results/run_2026-10-01_0137_before.md` is mislabeled. It was run after the cutoff had
+already been raised to 0.7 (its header says "relevance cutoff: 0.7"), so it is really an
+"after" run. I've left the file alone rather than rename evidence.
 
-Criterion 3 (run_eval.py::check_out_of_scope, cutoff 0.6): refused 5 of 5.
-  What is the capital of Mongolia?  0.825 refused
-  How do I change the oil in a diesel engine?  0.934 refused
-  Who won the 1994 World Cup?  0.886 refused
-  What is the recommended dosage of ibuprofen for a headache?  0.844 refused
-  How do I write a for loop in Rust?  0.896 refused
+### Real output (run 1 of `results/run_2026-09-30_2333_before.md` unless noted)
+
+**Criterion 1, original** — `scorer.py::judge` checks the `expects` word against the answer:
+
+```
+| Is the housing lottery actually random? | fail | fail | fail |
+| Which dining hall is considered the best or worth the walk? | fail | fail | fail |
+| What is the issue with Aldridge Hall? | fail | fail | fail |
+| How reliable is the campus shuttle? | fail | fail | fail |
+| How do students save money on textbooks? | pass | pass | pass |
+```
+
+**Criterion 1, revised** — `store.py::search`, the "Sources retrieved" line per question:
+
+```
+lottery:   admin_housing_lottery.txt, admin_parking_permits.txt, advising_registration.txt, housing_morrow_house.txt, housing_tamsin_court.txt   -> admin_housing_lottery.txt present
+dining:    dining_halden_hall.txt, dining_pellew_dining_hall.txt, dining_pellew_dining_hall_followup.txt, housing_aldridge_hall.txt, housing_innisfree_hall.txt   -> dining_kestrel_commons.txt MISSING
+Aldridge:  dining_pellew_dining_hall.txt, dining_pellew_dining_hall_followup.txt, housing_aldridge_hall.txt, housing_aldridge_hall_laundry.txt, housing_aldridge_hall_noise.txt   -> housing_aldridge_hall.txt present
+shuttle:   dining_the_ridgeway_cafe.txt, dining_verrill_street_grill.txt, housing_aldridge_hall.txt, housing_tamsin_court.txt, transit_shuttle.txt   -> transit_shuttle.txt present
+textbooks: admin_printing_quota.txt, course_cs_210.txt, course_cs_340.txt, money_textbooks.txt, study_group_rooms.txt   -> money_textbooks.txt present
+```
+
+**Criterion 2** — `generate.py::answer_from_chunks`. Four answers cite a file, e.g.:
+
+```
+Q: How reliable is the campus shuttle?
+A: The campus shuttle runs a loop every 20 minutes from 7am to 11pm on weekdays and every
+   40 minutes on weekends. Its published timetable is optimistic by about five minutes in
+   the morning and accurate for the rest of the day (transit_shuttle.txt).
+```
+
+The one that doesn't (`gate.py::check` refused it, so the model was never called):
+
+```
+Q: What is the issue with Aldridge Hall?
+- Best distance: 0.6559 (refused by the gate)
+A: I don't have enough information about that.
+```
+
+**Criterion 3** — `run_eval.py::check_out_of_scope`, cutoff 0.6. Refused 5 of 5:
+
+```
+| What is the capital of Mongolia? | 0.825 | refused |
+| How do I change the oil in a diesel engine? | 0.934 | refused |
+| Who won the 1994 World Cup? | 0.886 | refused |
+| What is the recommended dosage of ibuprofen for a headache? | 0.844 | refused |
+| How do I write a for loop in Rust? | 0.896 | refused |
+```
+
+**Criterion 4** — `chunk_check.py`, using `chunker.py::split_documents` (`results/chunk_lengths.txt`):
+
+```
+chunks: 88
+150-600 chars: 88 (100.0%)
+under 50 chars: 0
+shortest: 178  longest: 549
+documents the chunker split into more than one chunk: 0
+```
+
+**Criterion 5** — `time_check.py` (`results/timing_before.txt`), run 3, the slowest pass:
+
+```
+cutoff 0.6, top-k 5. Warm-up call (not counted): 2.02s
+run 3   0.64s  answered  Is the housing lottery actually random?
+run 3   2.11s  answered  Which dining hall is considered the best or worth the walk?
+run 3   0.05s  refused by gate  What is the issue with Aldridge Hall?
+run 3   0.81s  answered  How reliable is the campus shuttle?
+run 3   0.70s  answered  How do students save money on textbooks?
+run 3: 5/5 under 4.0s, slowest 2.11s
+```
 
 ## Verdicts
 
-<!-- MET or MISSED for each of the five, against the target you wrote last
-     unit — not a new one. Plus a sentence on how you decided. That sentence
-     matters most where it was close.
-
-     If your target said 4 of 5 and your runs came out 4, 3, 4, that's a MISS.
-     The target has to hold, not show up occasionally.
-
-     Milestone 2. -->
-
 | # | Criterion | Verdict | How I decided |
 |---|---|---|---|
-| 1 | Retrieved chunk contains the answer | MISSED | 1 of 5 in all three runs against a target of 4. Only textbooks passed. |
-| 2 | Every answer names a source | MISSED | 4 of 5. The Aldridge Hall answer was the gate's refusal and named no source. |
-| 3 | Gate stops out-of-corpus questions | MET | 5 of 5 refused. The closest out-of-scope question was at 0.825, well above the 0.6 cutoff. |
-| 4 | Chunk lengths | [ ] | [How many of 88 chunks fell between 150 and 600, and the shortest one.] |
-| 5 | Response time | [ ] | [Slowest of the 15 timings.] |
+| 1 | Retrieved chunk contains the answer | Original: MISSED. Revised: MET | Original: 1/5 in all three runs against a target of 4. Revised: 4/5 in all three runs, so it holds every time, not just once. Only the dining question misses. I wrote the revised check after seeing my first run, so it isn't a blind test. |
+| 2 | Every answer names a source | MISSED | 4/5 in every run against 5 of 5. The Aldridge Hall refusal names no source. You could argue a refusal isn't "an answer the system produces", which would make it 4/4 and MET. I didn't take that reading, because the user still gets a reply with no source on it and my criterion says "every answer". |
+| 3 | Gate stops out-of-corpus questions | MET | 5/5 against 4 of 5. The closest out-of-scope question was 0.825, well clear of 0.6, so this wasn't close. |
+| 4 | Chunk lengths | MET | 88/88 chunks (100%) are 150–600 chars and the shortest is 178, so 0 are under 50. It passes, but see Diagnoses: it was never going to fail. |
+| 5 | Response time | MET | All 15 timed answers came in under 4.0 s, and the slowest was 2.11 s. The warm-up call isn't counted. Including it wouldn't change this run (2.02 s), but it does matter after the fix (see What's Still Broken). |
 
 ## Diagnoses
 
