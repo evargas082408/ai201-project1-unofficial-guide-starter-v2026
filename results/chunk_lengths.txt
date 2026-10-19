@@ -1,0 +1,5 @@
+chunks: 88
+150-600 chars: 88 (100.0%)
+under 50 chars: 0
+shortest: 178  longest: 549
+documents the chunker split into more than one chunk: 0
